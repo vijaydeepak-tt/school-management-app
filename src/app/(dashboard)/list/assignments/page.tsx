@@ -2,7 +2,7 @@ import FormModal from '@/components/FormModal';
 import Pagination from '@/components/Pagination';
 import Table from '@/components/Table';
 import TableSearch from '@/components/TableSearch';
-import { userRole } from '@/lib/data';
+import { currentUserId, role } from '@/lib/auth';
 import { ETableType } from '@/lib/enums';
 import prisma from '@/lib/prisma';
 import { ITEMS_PER_PAGE } from '@/lib/settings';
@@ -42,10 +42,14 @@ const columns = [
     accessor: 'dueDate',
     className: 'hidden md:table-cell',
   },
-  {
-    header: 'Actions',
-    accessor: 'action',
-  },
+  ...(role === 'admin' || role === 'teacher'
+    ? [
+        {
+          header: 'Actions',
+          accessor: 'action',
+        },
+      ]
+    : []),
 ];
 
 const renderRow = (item: AssignmentList) => (
@@ -61,7 +65,7 @@ const renderRow = (item: AssignmentList) => (
     </td>
     <td>
       <div className='flex items-center gap-2'>
-        {userRole === 'admin' && (
+        {(role === 'admin' || role === 'teacher') && (
           <>
             {/* <button className='w-7 h-7 flex items-center justify-center rounded-full bg-sky'>
               <Image src='/update.png' alt='' width={16} height={16} />
@@ -90,26 +94,28 @@ export default async function AssignmentListPage({ searchParams }: Props) {
   const { page, ...queryParams } = searchParams;
   const pageNum = page ? +page : 1;
 
+  // URL Params conditions
+
   const query: Prisma.AssignmentWhereInput = {};
+
+  query.lesson = {};
 
   if (queryParams) {
     for (const [key, value] of Object.entries(queryParams)) {
       if (value !== undefined) {
         switch (key) {
           case 'teacherId':
-            query.lesson = {
-              teacherId: value,
-            };
+            query.lesson.teacherId = value;
             break;
           case 'classId':
-            query.lesson = {
-              classId: +value,
-            };
+            query.lesson.classId = +value;
             break;
           case 'search':
-            query.title = {
-              contains: value,
-              mode: 'insensitive',
+            query.lesson.subject = {
+              name: {
+                contains: value,
+                mode: 'insensitive',
+              },
             };
             break;
           default:
@@ -117,6 +123,35 @@ export default async function AssignmentListPage({ searchParams }: Props) {
         }
       }
     }
+  }
+
+  // ROLE Condition
+  switch (role) {
+    case 'admin':
+      break;
+    case 'teacher':
+      query.lesson.teacherId = currentUserId!;
+      break;
+    case 'student':
+      query.lesson.class = {
+        students: {
+          some: {
+            id: currentUserId!,
+          },
+        },
+      };
+      break;
+    case 'parent':
+      query.lesson.class = {
+        students: {
+          some: {
+            parentId: currentUserId!,
+          },
+        },
+      };
+      break;
+    default:
+      break;
   }
 
   const [data, total] = await prisma.$transaction([
@@ -155,7 +190,7 @@ export default async function AssignmentListPage({ searchParams }: Props) {
             <button className='w-8 h-8 flex items-center justify-center rounded-full bg-yellow'>
               <Image src='/sort.png' alt='' width={14} height={14} />
             </button>
-            {userRole === 'admin' && (
+            {(role === 'admin' || role === 'teacher') && (
               //   <button className='w-8 h-8 flex items-center justify-center rounded-full bg-yellow'>
               //     <Image src='/create.png' alt='' width={14} height={14} />
               //   </button>

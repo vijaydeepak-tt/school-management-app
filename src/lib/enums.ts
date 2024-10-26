@@ -12,3 +12,5 @@ export enum ETableType {
   event = 'event',
   announcement = 'announcement',
 }
+
+export type RoleType = 'admin' | 'student' | 'teacher' | 'parent';

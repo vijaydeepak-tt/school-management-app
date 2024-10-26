@@ -2,12 +2,12 @@ import FormModal from '@/components/FormModal';
 import Pagination from '@/components/Pagination';
 import Table from '@/components/Table';
 import TableSearch from '@/components/TableSearch';
-import { resultsData, userRole } from '@/lib/data';
+import { currentUserId, role } from '@/lib/auth';
 import { ETableType } from '@/lib/enums';
 import prisma from '@/lib/prisma';
 import { ITEMS_PER_PAGE } from '@/lib/settings';
 import { SearchParams } from '@/lib/types';
-import { Exam, Prisma, Result, Student } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import Image from 'next/image';
 import React from 'react';
 
@@ -56,10 +56,14 @@ const columns = [
     accessor: 'date',
     className: 'hidden md:table-cell',
   },
-  {
-    header: 'Actions',
-    accessor: 'action',
-  },
+  ...(role === 'admin' || role === 'teacher'
+    ? [
+        {
+          header: 'Actions',
+          accessor: 'action',
+        },
+      ]
+    : []),
 ];
 
 const renderRow = (item: ResultList) => (
@@ -77,7 +81,7 @@ const renderRow = (item: ResultList) => (
     </td>
     <td>
       <div className='flex items-center gap-2'>
-        {userRole === 'admin' && (
+        {(role === 'admin' || role === 'teacher') && (
           <>
             {/* <button className='w-7 h-7 flex items-center justify-center rounded-full bg-sky'>
               <Image src='/update.png' alt='' width={16} height={16} />
@@ -132,6 +136,41 @@ export default async function ResultListPage({ searchParams }: Props) {
         }
       }
     }
+  }
+
+  // ROLE Conditions
+
+  switch (role) {
+    case 'admin':
+      break;
+    case 'teacher':
+      query.OR = [
+        {
+          exam: {
+            lesson: {
+              teacherId: currentUserId!,
+            },
+          },
+        },
+        {
+          assignment: {
+            lesson: {
+              teacherId: currentUserId!,
+            },
+          },
+        },
+      ];
+      break;
+    case 'student':
+      query.studentId = currentUserId!;
+      break;
+    case 'parent':
+      query.student = {
+        id: currentUserId!,
+      };
+      break;
+    default:
+      break;
   }
 
   const [dataRes, total] = await prisma.$transaction([
@@ -201,7 +240,7 @@ export default async function ResultListPage({ searchParams }: Props) {
             <button className='w-8 h-8 flex items-center justify-center rounded-full bg-yellow'>
               <Image src='/sort.png' alt='' width={14} height={14} />
             </button>
-            {userRole === 'admin' && (
+            {(role === 'admin' || role === 'teacher') && (
               //   <button className='w-8 h-8 flex items-center justify-center rounded-full bg-yellow'>
               //     <Image src='/create.png' alt='' width={14} height={14} />
               //   </button>

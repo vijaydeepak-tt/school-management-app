@@ -2,7 +2,7 @@ import FormModal from '@/components/FormModal';
 import Pagination from '@/components/Pagination';
 import Table from '@/components/Table';
 import TableSearch from '@/components/TableSearch';
-import { eventsData, userRole } from '@/lib/data';
+import { currentUserId, role } from '@/lib/auth';
 import { ETableType } from '@/lib/enums';
 import prisma from '@/lib/prisma';
 import { ITEMS_PER_PAGE } from '@/lib/settings';
@@ -41,10 +41,14 @@ const columns = [
     accessor: 'endTime',
     className: 'hidden md:table-cell',
   },
-  {
-    header: 'Actions',
-    accessor: 'action',
-  },
+  ...(role === 'admin'
+    ? [
+        {
+          header: 'Actions',
+          accessor: 'action',
+        },
+      ]
+    : []),
 ];
 
 const renderRow = (item: EventList) => (
@@ -53,7 +57,7 @@ const renderRow = (item: EventList) => (
     className='border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-purpleLight'
   >
     <td className='flex items-center gap-4 p-4'>{item.title}</td>
-    <td>{item.class.name}</td>
+    <td>{item.class?.name || '-'}</td>
     <td className='hidden md:table-cell'>
       {new Intl.DateTimeFormat('en-US').format(item.startTime)}
     </td>
@@ -73,7 +77,7 @@ const renderRow = (item: EventList) => (
     </td>
     <td>
       <div className='flex items-center gap-2'>
-        {userRole === 'admin' && (
+        {role === 'admin' && (
           <>
             {/* <button className='w-7 h-7 flex items-center justify-center rounded-full bg-sky'>
               <Image src='/update.png' alt='' width={16} height={16} />
@@ -113,6 +117,41 @@ export default async function EventListPage({ searchParams }: Props) {
     }
   }
 
+  // ROLE Conditions
+
+  const roleConditions = {
+    teacher: {
+      lessons: {
+        some: {
+          teacherId: currentUserId!,
+        },
+      },
+    },
+    student: {
+      students: {
+        some: {
+          id: currentUserId!,
+        },
+      },
+    },
+    parent: {
+      students: {
+        some: {
+          parentId: currentUserId!,
+        },
+      },
+    },
+  };
+
+  query.OR = [
+    {
+      classId: null,
+    },
+    {
+      class: roleConditions[role as keyof typeof roleConditions] || {},
+    },
+  ];
+
   const [data, total] = await prisma.$transaction([
     prisma.event.findMany({
       where: query,
@@ -141,7 +180,7 @@ export default async function EventListPage({ searchParams }: Props) {
             <button className='w-8 h-8 flex items-center justify-center rounded-full bg-yellow'>
               <Image src='/sort.png' alt='' width={14} height={14} />
             </button>
-            {userRole === 'admin' && (
+            {role === 'admin' && (
               //   <button className='w-8 h-8 flex items-center justify-center rounded-full bg-yellow'>
               //     <Image src='/create.png' alt='' width={14} height={14} />
               //   </button>

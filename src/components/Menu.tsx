@@ -1,4 +1,4 @@
-import { userRole } from '@/lib/data';
+import { currentUser } from '@clerk/nextjs/server';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -117,7 +117,9 @@ const menuItems = [
   },
 ];
 
-export default function Menu() {
+export default async function Menu() {
+  const user = await currentUser();
+  const role = user?.publicMetadata.role as string;
   return (
     <div className='mt-3 text-sm'>
       {menuItems.map((menu) => (
@@ -127,7 +129,7 @@ export default function Menu() {
           </span>
           {menu.items.map(
             (item) =>
-              item.visible.includes(userRole) && (
+              item.visible.includes(role) && (
                 <Link
                   href={item.href}
                   className='flex items-center justify-center lg:justify-start gap-4 py-2 px-3 hover:bg-skyLight'

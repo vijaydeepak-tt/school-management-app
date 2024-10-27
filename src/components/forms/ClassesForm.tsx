@@ -2,54 +2,71 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
-import { z } from 'zod';
 import InputField from '../InputField';
-
-const schema = z.object({
-  classname: z
-    .string()
-    .min(2, { message: 'ClassName must be at least 3 characters long!' })
-    .max(20, { message: 'ClassName must be at most 20 characters long!' }),
-  capacity: z.string(),
-  grade: z
-    .string()
-    .min(1, { message: 'Grade must be at least 1 characters long!' })
-    .max(2, { message: 'Grade must be at most 2 characters long!' }),
-  supervisor: z.string().min(2, { message: 'supervisor name is required!' }),
-});
-
-type Inputs = z.infer<typeof schema>;
+import { ClassSchema, classSchema } from '@/lib/formValidationSchemas';
+import { Dispatch, SetStateAction, useEffect } from 'react';
+import { useFormState } from 'react-dom';
+import { createClass, updateClass } from '@/lib/actions';
+import { useRouter } from 'next/navigation';
+import { toast } from 'react-toastify';
 
 const ClassesForm = ({
   type,
   data,
+  setOpen,
+  relatedData,
 }: {
   type: 'create' | 'update';
   data?: any;
+  setOpen: Dispatch<SetStateAction<boolean>>;
+  relatedData?: any;
 }) => {
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<Inputs>({
-    resolver: zodResolver(schema),
+  } = useForm<ClassSchema>({
+    resolver: zodResolver(classSchema),
   });
+
+  const [state, formAction] = useFormState(
+    type === 'create' ? createClass : updateClass,
+    {
+      success: false,
+      error: false,
+    }
+  );
 
   const onSubmit = handleSubmit((data) => {
     console.log(data);
+    formAction(data);
   });
+
+  const router = useRouter();
+
+  useEffect(() => {
+    if (state.success) {
+      toast(`Subject has been ${type === 'create' ? 'created' : 'updated'}!`);
+      setOpen(false);
+      router.refresh();
+    }
+  }, [state, router, type, setOpen]);
+
+  const { teachers, grades } = relatedData;
 
   return (
     <form className='flex flex-col gap-8' onSubmit={onSubmit}>
-      <h1 className='text-xl font-semibold'>Add new class</h1>
+      <h1 className='text-xl font-semibold'>
+        {type === 'create' ? 'Create a new class' : 'Update the class'}
+      </h1>
       <span className='text-xs text-gray-400 font-medium'>Information</span>
       <div className='flex justify-between flex-wrap gap-4'>
         <InputField
           label='Class Name'
-          name='classname'
+          name='name'
           defaultValue={data?.name}
           register={register}
-          error={errors?.classname}
+          error={errors?.name}
         />
         <InputField
           label='Capacity'
@@ -58,27 +75,68 @@ const ClassesForm = ({
           register={register}
           error={errors?.capacity}
         />
-        <InputField
-          label='Grade'
-          name='grade'
-          type='text'
-          defaultValue={data?.grade}
-          register={register}
-          error={errors?.grade}
-        />
+        {data && (
+          <InputField
+            label='Id'
+            name='id'
+            defaultValue={data?.id}
+            register={register}
+            error={errors?.id}
+            hidden
+          />
+        )}
+        <div className='flex flex-col gap-2 w-full md:w-1/4'>
+          <label className='text-xs text-gray-500'>Supervisor</label>
+          <select
+            className='ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full'
+            {...register('supervisorId')}
+            defaultValue={data?.teachers}
+          >
+            {teachers.map(
+              (teacher: { id: string; name: string; surname: string }) => (
+                <option
+                  value={teacher.id}
+                  key={teacher.id}
+                  selected={data && teacher.id === data.supervisorId}
+                >
+                  {teacher.name + ' ' + teacher.surname}
+                </option>
+              )
+            )}
+          </select>
+          {errors.supervisorId?.message && (
+            <p className='text-xs text-red-400'>
+              {errors.supervisorId.message.toString()}
+            </p>
+          )}
+        </div>
+        <div className='flex flex-col gap-2 w-full md:w-1/4'>
+          <label className='text-xs text-gray-500'>Grade</label>
+          <select
+            className='ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full'
+            {...register('gradeId')}
+            defaultValue={data?.gradeId}
+          >
+            {grades.map((grade: { id: number; level: number }) => (
+              <option
+                value={grade.id}
+                key={grade.id}
+                selected={data && grade.id === data.gradeId}
+              >
+                {grade.level}
+              </option>
+            ))}
+          </select>
+          {errors.gradeId?.message && (
+            <p className='text-xs text-red-400'>
+              {errors.gradeId.message.toString()}
+            </p>
+          )}
+        </div>
       </div>
-      <span className='text-xs text-gray-400 font-medium'>
-        Personal Information
-      </span>
-      <div className=' ml-3 w-[90%]'>
-        <InputField
-          label='Supervisor'
-          name='supervisor'
-          defaultValue={data?.supervisor}
-          register={register}
-          error={errors.supervisor}
-        />
-      </div>
+      {state.error && (
+        <span className='text-red-500'>Something went wrong!</span>
+      )}
       <button className='bg-blue-400 text-white p-2 rounded-md'>
         {type === 'create' ? 'Create' : 'Update'}
       </button>

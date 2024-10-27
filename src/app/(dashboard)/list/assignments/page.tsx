@@ -1,4 +1,4 @@
-import FormModal from '@/components/FormModal';
+import FormContainer from '@/components/FormContainer';
 import Pagination from '@/components/Pagination';
 import Table from '@/components/Table';
 import TableSearch from '@/components/TableSearch';
@@ -73,12 +73,12 @@ const renderRow = (item: AssignmentList) => (
             {/* <button className='w-7 h-7 flex items-center justify-center rounded-full bg-purple'>
               <Image src='/delete.png' alt='' width={16} height={16} />
             </button> */}
-            <FormModal
+            <FormContainer
               table={ETableType.assignment}
               type='update'
               data={item}
             />
-            <FormModal
+            <FormContainer
               table={ETableType.assignment}
               type='delete'
               id={item.id}
@@ -194,7 +194,7 @@ export default async function AssignmentListPage({ searchParams }: Props) {
               //   <button className='w-8 h-8 flex items-center justify-center rounded-full bg-yellow'>
               //     <Image src='/create.png' alt='' width={14} height={14} />
               //   </button>
-              <FormModal table={ETableType.assignment} type='create' />
+              <FormContainer table={ETableType.assignment} type='create' />
             )}
           </div>
         </div>

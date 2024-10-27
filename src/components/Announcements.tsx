@@ -1,7 +1,10 @@
-import { currentUserId, role } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import { auth } from '@clerk/nextjs/server';
 
 export default async function Announcements() {
+  const { userId: currentUserId, sessionClaims } = auth();
+  const role = (sessionClaims?.metadata as { role?: string })?.role;
+
   const roleConditions = {
     teacher: { lessons: { some: { teacherId: currentUserId! } } },
     student: { students: { some: { id: currentUserId! } } },

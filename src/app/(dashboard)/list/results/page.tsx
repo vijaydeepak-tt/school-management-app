@@ -1,4 +1,4 @@
-import FormModal from '@/components/FormModal';
+import FormContainer from '@/components/FormContainer';
 import Pagination from '@/components/Pagination';
 import Table from '@/components/Table';
 import TableSearch from '@/components/TableSearch';
@@ -89,8 +89,16 @@ const renderRow = (item: ResultList) => (
             {/* <button className='w-7 h-7 flex items-center justify-center rounded-full bg-purple'>
               <Image src='/delete.png' alt='' width={16} height={16} />
             </button> */}
-            <FormModal table={ETableType.result} type='update' data={item} />
-            <FormModal table={ETableType.result} type='delete' id={item.id} />
+            <FormContainer
+              table={ETableType.result}
+              type='update'
+              data={item}
+            />
+            <FormContainer
+              table={ETableType.result}
+              type='delete'
+              id={item.id}
+            />
           </>
         )}
       </div>
@@ -244,7 +252,7 @@ export default async function ResultListPage({ searchParams }: Props) {
               //   <button className='w-8 h-8 flex items-center justify-center rounded-full bg-yellow'>
               //     <Image src='/create.png' alt='' width={14} height={14} />
               //   </button>
-              <FormModal table={ETableType.teacher} type='create' />
+              <FormContainer table={ETableType.teacher} type='create' />
             )}
           </div>
         </div>

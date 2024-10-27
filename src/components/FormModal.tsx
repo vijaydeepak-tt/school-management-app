@@ -1,9 +1,19 @@
 'use client';
 
+import {
+  deleteClass,
+  deleteExam,
+  deleteStudent,
+  deleteSubject,
+  deleteTeacher,
+} from '@/lib/actions';
 import { ETableType } from '@/lib/enums';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
-import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Dispatch, SetStateAction, useEffect, useState } from 'react';
+import { useFormState } from 'react-dom';
+import { toast } from 'react-toastify';
 
 const TeacherForm = dynamic(() => import('./forms/TeacherForm'), {
   loading: () => <h1>Loading...</h1>,
@@ -35,7 +45,24 @@ interface FormModalProps {
   type: FormType;
   data?: any;
   id?: number | string;
+  relatedData?: any;
 }
+
+const deleteActionMap = {
+  subject: deleteSubject,
+  class: deleteClass,
+  teacher: deleteTeacher,
+  student: deleteStudent,
+  exam: deleteExam,
+  // TODO: OTHER DELETE ACTIONS
+  parent: deleteSubject,
+  lesson: deleteSubject,
+  assignment: deleteSubject,
+  result: deleteSubject,
+  attendance: deleteSubject,
+  event: deleteSubject,
+  announcement: deleteSubject,
+};
 
 const getBg = (type: FormType) => {
   switch (type) {
@@ -49,26 +76,103 @@ const getBg = (type: FormType) => {
 };
 
 const forms: {
-  [key: string]: (type: 'create' | 'update', data?: any) => JSX.Element;
+  [key: string]: (
+    type: 'create' | 'update',
+    setOpen: Dispatch<SetStateAction<boolean>>,
+    data?: any,
+    relatedData?: any
+  ) => JSX.Element;
 } = {
-  teacher: (type, data) => <TeacherForm type={type} data={data} />,
-  student: (type, data) => <StudentForm type={type} data={data} />,
-  lesson: (type, data) => <LessonForm type={type} data={data} />,
-  subject: (type, data) => <SubjectForm type={type} data={data} />,
-  parent: (type, data) => <ParentForm type={type} data={data} />,
-  class: (type, data) => <ClassesForm type={type} data={data} />,
-  exam: (type, data) => <ExamForm type={type} data={data} />,
+  teacher: (type, setOpen, data, relatedData) => (
+    <TeacherForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
+      relatedData={relatedData}
+    />
+  ),
+  student: (type, setOpen, data, relatedData) => (
+    <StudentForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
+      relatedData={relatedData}
+    />
+  ),
+  lesson: (type, setOpen, data, relatedData) => (
+    <LessonForm
+      type={type}
+      data={data}
+      // setOpen={setOpen}
+      // relatedData={relatedData}
+    />
+  ),
+  subject: (type, setOpen, data, relatedData) => (
+    <SubjectForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
+      relatedData={relatedData}
+    />
+  ),
+  parent: (type, setOpen, data, relatedData) => (
+    <ParentForm
+      type={type}
+      data={data}
+      // setOpen={setOpen}
+      // relatedData={relatedData}
+    />
+  ),
+  class: (type, setOpen, data, relatedData) => (
+    <ClassesForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
+      relatedData={relatedData}
+    />
+  ),
+  exam: (type, setOpen, data, relatedData) => (
+    <ExamForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
+      relatedData={relatedData}
+    />
+  ),
 };
 
-export default function FormModal({ table, type, data, id }: FormModalProps) {
+export default function FormModal({
+  table,
+  type,
+  data,
+  id,
+  relatedData,
+}: FormModalProps) {
   const size = type === 'create' ? 'w-8 h-8' : 'w-7 h-7';
   const bgColor = getBg(type);
 
   const [open, setOpen] = useState(false);
 
+  const [state, formAction] = useFormState(deleteActionMap[table], {
+    success: false,
+    error: false,
+  });
+
+  const router = useRouter();
+
+  useEffect(() => {
+    if (state.success) {
+      toast(`${table} has been deleted!`);
+      setOpen(false);
+      router.refresh();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state, router]);
+
   const Form = () => {
     return type === 'delete' && id ? (
-      <form action='' className='p-4 flex flex-col gap-4'>
+      <form action={formAction} className='p-4 flex flex-col gap-4'>
+        <input type='text | number' name='id' value={id} hidden />
         <span className='text-center font-medium'>
           All data will be lost. Are you sure you want to delete this {table}?
         </span>
@@ -77,7 +181,7 @@ export default function FormModal({ table, type, data, id }: FormModalProps) {
         </button>
       </form>
     ) : type === 'create' || type === 'update' ? (
-      forms[table](type, data)
+      forms[table](type, setOpen, data, relatedData)
     ) : (
       'Form not found!'
     );
